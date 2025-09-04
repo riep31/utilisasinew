@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Raw Material & Packaging</title>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <style>
+    body { 
+      font-family:'Inter', 'Segoe UI', Tahoma, sans-serif; 
+      margin:0; 
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      min-height:100vh;
+    }
+
+    header {
+      display:flex; 
+      align-items:center; 
+      justify-content:flex-start;
+      background: linear-gradient(90deg,  #fff 10%, #2c3e50 100%);
+      padding:20px 30px; 
+      color:#2c3e50; 
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      margin-bottom: 25px;
+      gap: 40px;
+      border-bottom: 1px solid rgba(52, 73, 94, 0.1);
+      backdrop-filter: blur(10px);
+    }
+    
+    .logo { 
+      display:flex; 
+      align-items:center; 
+      flex-shrink:0; 
+    }
+    
+    .logo img { 
+      width:110px; 
+      height:55px; 
+      margin-right:20px; 
+      border-radius:12px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      transition: transform 0.3s ease;
+    }
+    
+    .logo img:hover {
+      transform: scale(1.05);
+    }
+    
+    .logo-text { 
+      display:flex; 
+      flex-direction:column; 
+      line-height:1.3; 
+    }
+    
+    .logo-text strong { 
+      font-size:22px; 
+      color:#2c3e50;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+    
+    .logo-text span { 
+      font-size:15px; 
+      opacity:0.8; 
+      color:#6c757d;
+      font-weight: 400;
+    }
+    
+    .controls { 
+      display:flex; 
+      gap:10px; 
+      align-items:center; 
+      flex-wrap:wrap; 
+    }
+    
+    button.ctrl { 
+      padding:12px 20px; 
+      border:none; 
+      border-radius:10px; 
+      cursor:pointer; 
+      font-size:14px; 
+      color:white; 
+      font-weight:600;
+      transition:all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
+    
+    button.ctrl::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+      transition: left 0.5s;
+    }
+    
+    button.ctrl:hover::before {
+      left: 100%;
+    }
+    
+    button.ctrl:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+    }
+    
+    .export{background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);} 
+    .print{background: linear-gradient(135deg, #2980b9 0%, #3498db 100%);} 
+    .refresh{background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);}
+    .back{background: linear-gradient(135deg, #8e44ad 0%, #9b59b6 100%);}
+    
+    .status { 
+      display:flex; 
+      align-items:center; 
+      font-size:12px; 
+      margin-left:15px; 
+    }
+    
+    .status span { 
+      width:10px; 
+      height:10px; 
+      border-radius:50%; 
+      display:inline-block; 
+      margin-right:6px; 
+    }
+    
+    .connected{background:#2ecc71;} 
+    .disconnected{background:#e74c3c;} 
+    .loading{background:#f1c40f;}
+
+    /* Enhanced Navigation breadcrumb with integrated filters */
+    .breadcrumb {
+      margin: 0 30px 18px 30px;
+      padding: 14px 21px;
+      background: linear-gradient(135deg,#f5f5f5 0%, #dcdcdc 30%, #b0b0b0 70%, #707070 100%);
+      border-radius: 15px;
+      font-size: 15px;
+      color: #495057;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: relative;
+      overflow: hidden;
+      backdrop-filter: blur(10px);
+      gap: 20px;
+    }
+    
+    .breadcrumb::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.9) 30%, transparent 50%);
+      pointer-events: none;
+    }
+    
+    .breadcrumb-left {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      z-index: 1;
+      position: relative;
+      flex: 1;
+    }
+    
+    .breadcrumb-nav {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .breadcrumb-nav .home-icon {
+      font-size: 16px;
+      margin-right: 5px;
+    }
+    
+    .breadcrumb a {
+      color: #495057;
+      text-decoration: none;
+      font-weight: 600;
+      padding: 5px 10px;
+      border-radius: 6px;
+      transition: all 0.3s ease;
+      background: rgba(108, 117, 125, 0.1);
+      backdrop-filter: blur(10px);
+    }
+    
+    .breadcrumb a:hover {
+      background: rgba(108, 117, 125, 0.5);
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      color: #2c3e50;
+    }
+    
+    .breadcrumb-separator {
+      color: #6c757d;
+      margin: 0 5px;
+      font-weight: bold;
+    }
+    
+    .breadcrumb-current {
+      color: #2c3e50;
+      font-weight: bold;
+      text-shadow: none;
+    }
+
+    /* Integrated filters in breadcrumb */
+    .breadcrumb-filters {
+      display: flex;
+      gap: 15px;
+      align-items: center;
+      z-index: 1;
+      position: relative;
+    }
+    
+    .breadcrumb input[type=text] {
+      padding: 10px 15px;
+      border: 2px solid rgba(52, 73, 94, 0.2);
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.95);
+      font-size: 14px;
+      min-width: 200px;
+      transition: all 0.3s ease;
+      font-weight: 500;
+    }
+    
+    .breadcrumb input[type=text]:focus {
+      outline: none;
+      border-color: #3498db;
+      box-shadow: 0 0 0 3px rgba(52,152,219,0.2);
+      transform: translateY(-1px);
+      background: rgba(255, 255, 255, 1);
+    }
+    
+    .breadcrumb select {
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.95);
+      border: 2px solid rgba(52, 73, 94, 0.2);
+      font-size: 14px;
+      min-width: 150px;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+
+    .breadcrumb select:focus {
+      outline: none;
+      border-color: #3498db;
+      box-shadow: 0 0 0 3px rgba(52,152,219,0.2);
+      transform: translateY(-1px);
+    }
+    
+    .breadcrumb-date {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      font-size: 13px;
+      z-index: 1;
+      position: relative;
+      background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+      padding: 10px 15px;
+      border-radius: 10px;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(44, 62, 80, 0.3);
+      color: #495057;
+      box-shadow: 0 4px 15px rgba(44, 62, 80, 0.3);
+      flex-shrink: 0;
+    }
+    
+    .breadcrumb-date .date-main {
+      font-weight: bold;
+      font-size: 15px;
+      margin-bottom: 2px;
+      color: white;
+      font-weight: 700;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    }
+    
+    .breadcrumb-date .date-day {
+      opacity: 1;
+      font-size: 13px;
+      text-transform: capitalize;
+      color: white;
+      font-weight: 700;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Tabel */
+    .table-container{
+      margin:0 30px 30px 30px;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 21px;
+      border-radius:20px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+      overflow-x:auto;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+    
+    table{
+      width:100%;
+      border-collapse:collapse;
+      font-size:14px;
+      overflow: hidden;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+    
+    td{
+      border:1px solid rgba(52, 73, 94, 0.1);
+      padding:16px 12px;
+      text-align:left;
+    }
+    
+    th {
+      border: 1px solid rgba(52, 73, 94, 0.1);
+      padding: 16px 12px;
+      text-align: left;
+      background: #2c3e50;
+      color: white;
+      cursor: pointer;
+      font-weight: 700;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-size: 13px;
+    }
+
+    th.sorted-asc::after { content: " ▲"; } 
+    th.sorted-desc::after { content: " ▼"; }
+
+    tr:nth-child(even) { 
+      background: rgba(248, 249, 250, 0.8); 
+    }
+
+    tbody tr:hover { 
+      background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%) !important;
+      transform: scale(1.01);
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    tr.selected { 
+      background: linear-gradient(135deg, #bbdefb 0%, #90caf9 100%) !important; 
+      border-left: 5px solid #2196f3; 
+      box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
+    }
+
+    .totals {
+      margin-top: 15px;
+      font-weight: bold;
+      font-size: 14px;
+      text-align: right;
+      color: #2c3e50;
+    }
+
+    /* Subtotal Styles */
+    .subtotals {
+      margin-top: 25px;
+      padding: 21px;
+      background: rgba(108, 117, 125, 0.2);
+    
+      box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+      border: 1px solid rgba(255, 255, 255, 0.5);
+      backdrop-filter: blur(8px);
+    }
+
+    .subtotals h4 {
+      margin: 0 0 20px 0;
+      color: #212529;
+      font-size: 18px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .subtotal-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px 25px; 
+      border-bottom: 1px solid rgba(73, 80, 87, 0.25);
+      font-weight: bold;
+      color: #343a40;
+      transition: background 0.3s ease, box-shadow 0.3s ease, text-shadow 0.3s ease;
+      border-radius: 10px;
+    }
+
+    .subtotal-row:hover {
+      background: rgba(52, 152, 219, 0.2);
+    }
+
+    .subtotal-row:hover .subtotal-label {
+      color: #212529;
+    }
+
+    .subtotal-row:last-child {
+      border-bottom: none;
+    }
+
+    .subtotal-label {
+      font-weight: 700;
+      font-size: 15px;
+      transition: color 0.3s ease, text-shadow 0.3s ease;
+    }
+
+    .subtotal-value {
+      color: #212529;
+      font-family: 'SF Mono', 'Monaco', 'Cascadia Code', 'Courier New', monospace;
+      font-size: 16px;
+      font-weight: bold;
+      background: rgba(52, 58, 64, 0.15);
+      padding: 8px 15px;
+      border-radius: 8px;
+      transition: background 0.3s ease;
+    }
+
+    .subtotal-value:hover {
+      background: rgba(52, 58, 64, 0.3);
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+      .breadcrumb {
+        flex-direction: column;
+        gap: 15px;
+        align-items: stretch;
+        padding: 20px;
+      }
+      
+      .breadcrumb-left {
+        flex-direction: column;
+        gap: 15px;
+        align-items: flex-start;
+      }
+      
+      .breadcrumb-filters {
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+      
+      .breadcrumb input[type=text], 
+      .breadcrumb select {
+        min-width: 100%;
+        flex: 1;
+      }
+      
+      .breadcrumb-date {
+        align-self: center;
+        margin-top: 10px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .breadcrumb input[type=text] {
+        min-width: 160px;
+      }
+      
+      .breadcrumb select {
+        min-width: 120px;
+      }
+      
+      .controls {
+        flex-wrap: wrap;
+      }
+      
+      .logo-text strong {
+        font-size: 18px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Main Content -->
+  <div class="main" id="main">
+    <header>
+      <div class="logo">
+        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRYyanHkNjy-MEGWx-yRWA8XiFF9HbWiLoGFY9HRkEpuBXKYGjxU_TMW2dK4ONcqKA4tg&usqp=CAU">
+        <div class="logo-text">
+          <strong>Raw Material & Packaging</strong>
+          <span>Update Stock Raw Material & Packaging</span>
+        </div>
+      </div>
+      <div class="controls">
+        <button class="ctrl back" onclick="goBackToDashboard()" title="Kembali ke Dashboard Utama">← Dashboard</button>
+        <button class="ctrl export" onclick="exportTable()">⬇ Export</button>
+        <button class="ctrl print" onclick="printTable()">🖨 Print</button>
+        <button class="ctrl refresh" onclick="loadSheet()">🔄 Refresh Data</button>
+        <div class="status" id="status">
+          <span class="disconnected"></span><span id="statusText">Disconnected</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Enhanced Navigation breadcrumb with integrated filters and date -->
+    <div class="breadcrumb" id="breadcrumb">
+      <div class="breadcrumb-left">
+        <div class="breadcrumb-nav">
+          <span class="home-icon">🏠</span>
+          <a href="#" onclick="goBackToDashboard()">Dashboard Utama</a>
+          <span class="breadcrumb-separator">›</span>
+          <span class="breadcrumb-current">Raw Material & Packaging</span>
+        </div>
+        
+        <!-- Integrated Filters -->
+        <div class="breadcrumb-filters">
+          <input type="text" id="searchBox" placeholder="🔍 Search..." oninput="applyFilters()">
+          <select id="filterC" onchange="applyFilters()">
+            <option value="">-- Filter --</option>
+          </select>
+        </div>
+      </div>
+      
+      <div class="breadcrumb-date" id="breadcrumbDate">
+        <div class="date-main" id="currentDate">Loading...</div>
+        <div class="date-day" id="currentDay">Loading...</div>
+      </div>
+    </div>
+
+    <!-- Main Table -->
+    <div class="table-container">
+      <table id="sheetTable"><thead></thead><tbody></tbody></table>
+      
+      <!-- Subtotals Section -->
+      <div class="subtotals" id="subtotals">
+        <h4>📊 Sub Totals</h4>
+        <div class="subtotal-row">
+          <span class="subtotal-label">Sub Total Pcs:</span>
+          <span class="subtotal-value" id="subtotalH">0</span>
+        </div>
+        <div class="subtotal-row">
+          <span class="subtotal-label">Sub Total Kgs/Roll/Meter/Ltr:</span>
+          <span class="subtotal-value" id="subtotalI">0</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+// Google Sheets API Configuration
+let apiKey = 'AIzaSyD3nhZyvd7npQw6n9mPXxOA6svJdo_JQis';
+let spreadsheetId = '1ngP7PTE4mNKtkcTQU5sRYswdYmdC401M4ioxxkt-Hxw';
+let sheetName = 'RAW PACKAGING'; // Raw Material & Packaging sheet
+
+let allRows = [];
+let currentSort = { index: -1, asc: true };
+
+// Function to update current date and time in breadcrumb
+function updateBreadcrumbDate() {
+  const now = new Date();
+  
+  // Indonesian day names
+  const dayNames = [
+    'minggu', 'senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu'
+  ];
+  
+  // Indonesian month names
+  const monthNames = [
+    'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+  ];
+  
+  const dayName = dayNames[now.getDay()];
+  const day = now.getDate();
+  const month = monthNames[now.getMonth()];
+  const year = now.getFullYear();
+  
+  // Add calendar icon to the date string
+  const dateString = `📅 ${day} ${month} ${year}`;
+  
+  document.getElementById('currentDate').innerHTML = dateString;
+  document.getElementById('currentDay').innerHTML = dayName;
+}
+
+// Function to get dashboard URL from various sources
+function getDashboardUrl() {
+  console.log('Current URL:', window.location.href);
+  console.log('Current Path:', window.location.pathname);
+  console.log('Referrer:', document.referrer);
+  
+  // Try to get dashboard URL from URL parameters
+  const urlParams = new URLSearchParams(window.location.search);
+  const returnUrl = urlParams.get('return');
+  if (returnUrl) {
+    console.log('Using return URL:', returnUrl);
+    return decodeURIComponent(returnUrl);
+  }
+  
+  // Try to get from document referrer
+  if (document.referrer && document.referrer !== window.location.href) {
+    console.log('Using referrer URL:', document.referrer);
+    return document.referrer;
+  }
+  
+  // For GitHub Pages - specific URLs
+  const githubPagesUrls = [
+    'https://riep31.github.io/UtilisasiWarehouse/dashboard.html',
+    '/UtilisasiTes/dashboard.html',
+    './dashboard.html',
+    '../dashboard.html'
+  ];
+  
+  console.log('Trying dashboard URLs:', githubPagesUrls);
+  return githubPagesUrls[0];
+}
+
+// Navigation function - Fixed to be properly global
+function goBackToDashboard() {
+  console.log('Going back to dashboard...');
+  
+  try {
+    // Method 1: Use referrer if available and valid
+    if (document.referrer && 
+        document.referrer !== window.location.href && 
+        document.referrer.includes('dashboard.html')) {
+      console.log('Using referrer method');
+      window.location.href = document.referrer;
+      return;
+    }
+    
+    // Method 2: Use browser history if available
+    if (window.history.length > 1) {
+      console.log('Using history back method');
+      window.history.back();
+      return;
+    }
+    
+    // Method 3: Navigate to specific dashboard URL
+    const dashboardUrl = getDashboardUrl();
+    console.log('Using direct navigation to:', dashboardUrl);
+    if (dashboardUrl) {
+      window.location.href = dashboardUrl;
+    } else {
+      // Method 4: Fallback options
+      console.log('Using fallback method');
+      if (confirm('Tidak dapat menemukan dashboard. Apakah ingin ke halaman utama?')) {
+        window.location.href = 'https://riep31.github.io/UtilisasiTes/';
+      }
+    }
+  } catch (error) {
+    console.error('Error in goBackToDashboard:', error);
+    // Final fallback
+    if (confirm('Terjadi error saat navigasi. Apakah ingin ke halaman utama?')) {
+      window.location.href = 'https://riep31.github.io/UtilisasiTes/';
+    }
+  }
+}
+
+// Update page title and breadcrumb based on referrer or URL params
+function updateNavigationContext() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const returnUrl = urlParams.get('return');
+  const returnName = urlParams.get('returnName') || 'Dashboard Utama';
+  
+  if (returnUrl || document.referrer) {
+    const breadcrumbNav = document.querySelector('.breadcrumb-nav');
+    breadcrumbNav.innerHTML = `
+      <span class="home-icon">🏠</span>
+      <a href="#" onclick="goBackToDashboard()">${returnName}</a>
+      <span class="breadcrumb-separator">›</span>
+      <span class="breadcrumb-current">Raw Material & Packaging</span>
+    `;
+  }
+}
+
+// Google Sheets API function to fetch data
+async function fetchSheetData(sheetNameParam) {
+  if (!apiKey || !spreadsheetId) {
+    throw new Error('API key or spreadsheet ID not configured');
+  }
+  
+  const range = `${sheetNameParam}!A:Z`;
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}?key=${apiKey}`;
+  
+  const response = await fetch(url);
+  
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(`Google Sheets API Error: ${errorData.error?.message || response.statusText}`);
+  }
+  
+  const data = await response.json();
+  return data.values || [];
+}
+
+// Function to calculate subtotals
+function calculateSubtotals(rows) {
+  if (rows.length <= 1) return { subtotalH: 0, subtotalI: 0 };
+  
+  let subtotalH = 0, subtotalI = 0;
+  
+  rows.slice(1).forEach(row => {
+    const valueH = parseFloat(row[7]) || 0; // Column H
+    if (!isNaN(valueH)) subtotalH += valueH;
+    
+    const valueI = parseFloat(row[8]) || 0; // Column I
+    if (!isNaN(valueI)) subtotalI += valueI;
+  });
+  
+  return { subtotalH, subtotalI };
+}
+
+// Function to update subtotals display
+function updateSubtotals(rows) {
+  const subtotals = calculateSubtotals(rows);
+  
+  document.getElementById('subtotalH').textContent = subtotals.subtotalH.toLocaleString('id-ID', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2
+  });
+  
+  document.getElementById('subtotalI').textContent = subtotals.subtotalI.toLocaleString('id-ID', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2
+  });
+}
+
+async function loadSheet(){
+  if (!apiKey || apiKey === 'YOUR_API_KEY_HERE') {
+    setStatus("disconnected", "API Key belum dikonfigurasi");
+    return;
+  }
+  
+  setStatus("loading","Loading...");
+  try{
+    const mainSheetData = await fetchSheetData(sheetName);
+    allRows = mainSheetData;
+    renderTable(allRows);
+    fillFilter(allRows);
+    updateSubtotals(allRows);
+    setStatus("connected","Connected");
+  } catch(error) {
+    console.error('Error loading sheet:', error);
+    setStatus("disconnected","Error: " + error.message);
+  }
+}
+
+function renderTable(rows){
+  let thead=document.querySelector("#sheetTable thead");
+  let tbody=document.querySelector("#sheetTable tbody");
+  thead.innerHTML=""; 
+  tbody.innerHTML="";
+  
+  if(rows.length === 0) return;
+  
+  let header=document.createElement("tr");
+  rows[0].forEach((h,i)=>{
+    let th=document.createElement("th"); 
+    th.textContent=h;
+    th.onclick=()=>sortTable(i);
+    if(currentSort.index===i) th.classList.add(currentSort.asc?"sorted-asc":"sorted-desc");
+    header.appendChild(th);
+  }); 
+  thead.appendChild(header);
+
+  rows.slice(1).forEach((r,index)=>{
+    let tr=document.createElement("tr");
+    r.forEach((c,i)=>{
+      let td=document.createElement("td"); 
+      td.textContent=c;
+      tr.appendChild(td);
+    });
+    
+    // Add click functionality to highlight selected row
+    tr.onclick = () => {
+      document.querySelectorAll("#sheetTable tbody tr").forEach(row => row.classList.remove("selected"));
+      tr.classList.add("selected");
+    };
+    
+    tbody.appendChild(tr);
+  });
+  
+  updateSubtotals(rows);
+}
+
+function sortTable(i){
+  let rows=[...allRows]; 
+  if(i===currentSort.index) currentSort.asc=!currentSort.asc; 
+  else currentSort={index:i,asc:true};
+  let header=rows.shift();
+  rows.sort((a,b)=>{
+    let va=a[i],vb=b[i]; 
+    let na=parseFloat(va), nb=parseFloat(vb);
+    if(!isNaN(na)&&!isNaN(nb)) return currentSort.asc?na-nb:nb-na;
+    return currentSort.asc?va.localeCompare(vb):vb.localeCompare(va);
+  });
+  let sortedRows = [header,...rows];
+  renderTable(sortedRows);
+  updateSubtotals(sortedRows);
+}
+
+function applyFilters(){
+  let search=document.getElementById("searchBox").value.toLowerCase();
+  let fC=document.getElementById("filterC").value;
+  let filtered=allRows.filter((r,i)=>{
+    if(i===0)return true;
+    let s=r.some(c=>c.toLowerCase().includes(search));
+    let mC=!fC||r[1]===fC;
+    return s && mC;
+  });
+  renderTable(filtered);
+  updateSubtotals(filtered);
+}
+
+function fillFilter(rows){
+  let sc=document.getElementById("filterC");
+  sc.innerHTML="<option value=''>-- Filter --</option>";
+  let vals=[...new Set(rows.slice(1).map(r=>r[1]))];
+  vals.forEach(v=>{
+    if(v){
+      let o=document.createElement("option");
+      o.value=v;
+      o.textContent=v;
+      sc.appendChild(o);
+    }
+  });
+}
+
+function exportTable(){ 
+  let csv=Papa.unparse(allRows); 
+  let blob=new Blob([csv],{type:"text/csv"}); 
+  let url=URL.createObjectURL(blob); 
+  let a=document.createElement("a"); 
+  a.href=url; 
+  a.download="raw_material_packaging_data.csv"; 
+  a.click(); 
+  URL.revokeObjectURL(url);
+}
+
+function printTable(){ 
+  window.print(); 
+}
+
+function setStatus(st,t){ 
+  let span=document.querySelector("#status span"); 
+  span.className=st==="connected"?"connected":st==="loading"?"loading":"disconnected"; 
+  document.getElementById("statusText").textContent=t; 
+}
+
+// Initialize page when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+  updateNavigationContext();
+  updateBreadcrumbDate();
+  loadSheet();
+  
+  // Update date every minute
+  setInterval(updateBreadcrumbDate, 60000);
+});
+
+// Make functions globally accessible
+window.goBackToDashboard = goBackToDashboard;
+window.loadSheet = loadSheet;
+window.applyFilters = applyFilters;
+window.exportTable = exportTable;
+window.printTable = printTable;
+</script>
+</body>
+</html>
